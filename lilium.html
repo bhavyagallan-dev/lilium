@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lilium — Every bloom begins unseen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#000;
+    --lavender:#cbb3e6;
+    --pink:#e8a4bc;
+    --gold:#f5d9a8;
+    --ink:#f4eef7;
+    --dim:rgba(244,238,247,.55);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  /* native smooth-scroll off — Lenis drives the scroll */
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    font-weight:300;
+    overflow-x:hidden;
+  }
+  ::selection{background:rgba(203,179,230,.35)}
+
+  /* ---------- background gradient layers (crossfaded by JS) ---------- */
+  .bg-layer{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    opacity:0;transition:opacity .4s linear;
+  }
+  #bg-night{background:#000;opacity:1}
+  #bg-dream{background:radial-gradient(120% 100% at 50% 40%, #241743 0%, #120b24 55%, #000 100%)}
+  #bg-dusk{background:radial-gradient(110% 100% at 50% 35%, #1c0e18 0%, #0a050b 55%, #000 100%)}
+
+  #stars{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.45}
+
+  canvas#scene{
+    position:fixed;inset:0;z-index:1;display:block;
+  }
+
+  /* soft vignette over the 3D */
+  #vignette{
+    position:fixed;inset:0;z-index:2;pointer-events:none;
+    background:radial-gradient(125% 95% at 50% 45%, transparent 55%, rgba(2,1,4,.55) 100%);
+  }
+
+  /* ---------- nav ---------- */
+  nav{
+    position:fixed;top:22px;left:50%;transform:translateX(-50%);
+    z-index:50;display:flex;align-items:center;gap:34px;
+    padding:12px 30px;border-radius:100px;
+    background:rgba(255,255,255,.045);
+    border:1px solid rgba(255,255,255,.1);
+    backdrop-filter:blur(18px) saturate(140%);
+    -webkit-backdrop-filter:blur(18px) saturate(140%);
+    box-shadow:0 8px 32px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.12);
+  }
+  nav .brand{
+    font-family:'Cormorant Garamond',serif;font-weight:500;
+    letter-spacing:.42em;font-size:15px;text-transform:uppercase;
+    background:linear-gradient(90deg,var(--pink),var(--lavender));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    padding-left:.42em;
+  }
+  nav a{
+    color:var(--dim);text-decoration:none;font-size:12.5px;letter-spacing:.14em;
+    text-transform:uppercase;transition:color .3s;
+  }
+  nav a:hover{color:var(--ink)}
+  @media(max-width:640px){ nav a{display:none} }
+
+  /* sound toggle */
+  #soundBtn{
+    position:fixed;top:24px;right:24px;z-index:50;
+    width:44px;height:44px;border-radius:50%;cursor:pointer;
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    color:var(--dim);font-size:16px;display:flex;align-items:center;justify-content:center;
+    transition:color .3s, box-shadow .3s;
+  }
+  #soundBtn.on{color:var(--gold);box-shadow:0 0 18px rgba(245,217,168,.25)}
+
+  /* ---------- content sections ---------- */
+  main{position:relative;z-index:10;pointer-events:none}
+  main a, main button, main input{pointer-events:auto}
+  section{
+    min-height:100vh;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    padding:0 7vw;text-align:center;position:relative;
+  }
+
+  h1,h2,.serif{font-family:'Cormorant Garamond',serif;font-weight:300}
+  .eyebrow{
+    font-size:11.5px;letter-spacing:.5em;text-transform:uppercase;
+    color:var(--lavender);opacity:.8;margin-bottom:26px;padding-left:.5em;
+  }
+  .hero h1{
+    font-size:clamp(2.6rem,7.2vw,6.4rem);line-height:1.06;
+    background:linear-gradient(180deg,#fff 20%, #d9c3ea 75%, #b693d6 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 80px rgba(203,179,230,.0);
+  }
+  .hero h1 em{font-style:italic;background:linear-gradient(180deg,#ffe9f1,#e8a4bc);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{
+    margin-top:30px;max-width:560px;font-size:clamp(.95rem,1.4vw,1.12rem);
+    line-height:1.85;color:var(--dim);letter-spacing:.02em;
+  }
+  .statement{
+    font-size:clamp(1.8rem,4.6vw,3.6rem);line-height:1.32;max-width:900px;
+    color:#efe6f6;font-family:'Cormorant Garamond',serif;font-weight:300;
+  }
+  .statement em{font-style:italic;color:var(--pink)}
+  .statement .gold{color:var(--gold);font-style:italic}
+  .whisper{
+    font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+    font-size:clamp(1.4rem,3.4vw,2.6rem);color:rgba(238,228,250,.92);
+    text-shadow:0 0 40px rgba(203,179,230,.45);
+  }
+
+  /* ---------- story layout: flower holds the upper stage, copy sits centered in the lower band ---------- */
+  section.story{align-items:center;justify-content:flex-end;padding-bottom:11vh;text-align:center}
+  .copy{
+    text-align:center;max-width:680px;margin:0 auto;
+    padding:38px 48px;border-radius:28px;
+    background:rgba(7,4,16,.5);
+    border:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(18px) saturate(130%);
+    -webkit-backdrop-filter:blur(18px) saturate(130%);
+    box-shadow:0 24px 80px rgba(0,0,0,.5);
+  }
+  .copy.bare{background:transparent;border-color:transparent;
+    backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;padding:0}
+  .copy .sub{margin-left:auto;margin-right:auto;max-width:560px}
+  .copy.center{max-width:780px}
+  section.story .statement{font-size:clamp(1.5rem,3.2vw,2.5rem)}
+  .taglines{align-items:center;text-align:center}
+  @media(max-width:760px){
+    .copy{padding:30px 24px}
+  }
+
+  /* scroll-reveal */
+  .reveal{opacity:0;transform:translateY(46px);transition:opacity 1.4s cubic-bezier(.16,1,.3,1), transform 1.4s cubic-bezier(.16,1,.3,1)}
+  .reveal.visible{opacity:1;transform:none}
+  .reveal.d1{transition-delay:.18s}.reveal.d2{transition-delay:.36s}.reveal.d3{transition-delay:.54s}
+
+  /* scroll hint */
+  .scroll-hint{
+    position:absolute;bottom:42px;left:50%;transform:translateX(-50%);
+    display:flex;flex-direction:column;align-items:center;gap:14px;
+    color:var(--dim);font-size:10.5px;letter-spacing:.45em;text-transform:uppercase;
+  }
+  .scroll-hint .line{
+    width:1px;height:56px;overflow:hidden;background:rgba(255,255,255,.08);position:relative;
+  }
+  .scroll-hint .line::after{
+    content:'';position:absolute;left:0;top:-50%;width:1px;height:50%;
+    background:linear-gradient(180deg,transparent,var(--lavender));
+    animation:drip 2.2s cubic-bezier(.4,0,.2,1) infinite;
+  }
+  @keyframes drip{0%{top:-50%}70%,100%{top:110%}}
+
+  /* taglines */
+  .taglines{display:flex;flex-direction:column;gap:2.2rem}
+  .taglines .whisper{font-size:clamp(1.2rem,2.6vw,2rem)}
+
+  /* ---------- feature cards ---------- */
+  .feature-wrap{min-height:95vh;display:flex;align-items:center;width:100%;padding:0 7vw}
+  .feature-wrap:nth-child(odd){justify-content:flex-start}
+  .feature-wrap:nth-child(even){justify-content:flex-end}
+  .card{
+    pointer-events:auto;
+    width:min(440px,88vw);text-align:left;
+    padding:42px 44px 46px;border-radius:26px;position:relative;overflow:hidden;
+    background:linear-gradient(135deg, rgba(255,255,255,.075), rgba(255,255,255,.025) 55%, rgba(203,179,230,.05));
+    border:1px solid rgba(255,255,255,.12);
+    backdrop-filter:blur(22px) saturate(150%);
+    -webkit-backdrop-filter:blur(22px) saturate(150%);
+    box-shadow:0 24px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.14);
+  }
+  .card::before{ /* liquid glass sheen */
+    content:'';position:absolute;top:-60%;left:-30%;width:80%;height:160%;
+    background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.09) 50%,transparent 70%);
+    transform:rotate(8deg);pointer-events:none;
+  }
+  .card .num{
+    font-family:'Cormorant Garamond',serif;font-style:italic;
+    font-size:15px;letter-spacing:.3em;color:var(--gold);opacity:.9;
+  }
+  .card h3{
+    font-family:'Cormorant Garamond',serif;font-weight:400;
+    font-size:clamp(1.6rem,2.6vw,2.1rem);margin:14px 0 14px;color:#fdf8ff;
+  }
+  .card p{font-size:.95rem;line-height:1.8;color:var(--dim)}
+  .card .vein{
+    position:absolute;left:0;top:0;width:100%;height:2px;
+    background:linear-gradient(90deg,transparent,var(--pink),var(--lavender),transparent);
+    opacity:.55;
+  }
+
+  /* ---------- finale ---------- */
+  .finale h2{
+    font-size:clamp(2.4rem,6vw,5rem);line-height:1.15;
+    background:linear-gradient(180deg,#fff6ee 10%, #f3c8d8 55%, #d3aee8 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .cta-row{margin-top:46px;display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+  .cta-row input{
+    width:min(320px,70vw);padding:16px 24px;border-radius:100px;outline:none;
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    color:var(--ink);font-family:'Inter',sans-serif;font-weight:300;font-size:.92rem;
+    letter-spacing:.03em;
+  }
+  .cta-row input::placeholder{color:rgba(244,238,247,.35)}
+  .btn{
+    padding:16px 38px;border-radius:100px;border:none;cursor:pointer;
+    font-family:'Inter',sans-serif;font-size:.85rem;letter-spacing:.18em;text-transform:uppercase;
+    color:#1d0f1e;font-weight:500;
+    background:linear-gradient(120deg,#ffd9e6,#e8a4bc 45%,#cbb3e6);
+    box-shadow:0 8px 36px rgba(232,164,188,.35), inset 0 1px 0 rgba(255,255,255,.6);
+    transition:transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s;
+  }
+  .btn:hover{transform:translateY(-3px);box-shadow:0 16px 48px rgba(232,164,188,.5), inset 0 1px 0 rgba(255,255,255,.6)}
+
+  footer{
+    position:relative;z-index:10;text-align:center;padding:60px 20px 48px;
+    color:rgba(244,238,247,.3);font-size:11.5px;letter-spacing:.3em;text-transform:uppercase;
+  }
+  footer .mark{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:20px;
+    letter-spacing:.2em;color:rgba(232,164,188,.55);margin-bottom:14px;text-transform:none}
+
+  /* loader */
+  #loader{
+    position:fixed;inset:0;z-index:100;background:var(--bg);
+    display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;
+    transition:opacity 1.2s ease .3s, visibility 1.2s ease .3s;
+  }
+  #loader.done{opacity:0;visibility:hidden}
+  #loader::before{
+    content:'';position:absolute;width:360px;height:360px;border-radius:50%;
+    background:radial-gradient(circle, rgba(216,150,226,.30), rgba(140,90,200,.12) 45%, transparent 70%);
+    filter:blur(14px);animation:glowPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes glowPulse{0%,100%{transform:scale(.8);opacity:.55}50%{transform:scale(1.18);opacity:1}}
+  #loader .mark{
+    position:relative;
+    filter:drop-shadow(0 0 22px rgba(232,164,188,.7)) drop-shadow(0 0 60px rgba(203,179,230,.4));
+  }
+  #loader .mark{
+    font-family:'Cormorant Garamond',serif;letter-spacing:.5em;font-size:22px;
+    text-transform:uppercase;padding-left:.5em;
+    background:linear-gradient(90deg,var(--pink),var(--lavender));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    animation:breathe 2.4s ease-in-out infinite;
+  }
+  @keyframes breathe{0%,100%{opacity:.45}50%{opacity:1}}
+</style>
+</head>
+<body>
+
+<div id="bg-night" class="bg-layer"></div>
+<div id="bg-dream" class="bg-layer"></div>
+<div id="bg-dusk"  class="bg-layer"></div>
+<canvas id="stars"></canvas>
+<canvas id="scene"></canvas>
+<div id="vignette"></div>
+
+<div id="loader"><div class="mark">Lilium</div></div>
+
+<nav>
+  <span class="brand">Lilium</span>
+  <a href="#sec-ambition">Vision</a>
+  <a href="#features">Features</a>
+  <a href="#sec-finale">Begin</a>
+</nav>
+<button id="soundBtn" title="toggle chimes" aria-label="toggle sound">&#9836;</button>
+
+<main>
+
+  <!-- HERO : closed bud -->
+  <section class="hero story" id="sec-hero" style="min-height:135vh;justify-content:flex-start;padding-top:52vh">
+    <div class="copy">
+      <div class="eyebrow reveal">Chapter I &nbsp;·&nbsp; The Seed</div>
+      <h1 class="reveal d1">Every bloom<br><em>begins unseen.</em></h1>
+      <p class="sub reveal d2">This is the story of a life — yours. In the dark, before anyone is watching, something is already growing. Lilium is the AI operating system that walks beside it.</p>
+    </div>
+    <div class="scroll-hint"><span>scroll to begin</span><div class="line"></div></div>
+  </section>
+
+  <!-- AMBITION -->
+  <section class="story" id="sec-ambition">
+    <div class="copy">
+      <div class="eyebrow reveal">Chapter II &nbsp;·&nbsp; The Ache</div>
+      <p class="statement reveal d1">You already know what you want.<br>
+      The ache was never <em>ambition</em> —<br>it was knowing what to do next,<br>and staying with it long enough <span class="gold">to transform.</span></p>
+    </div>
+  </section>
+
+  <!-- BLOOMING -->
+  <section class="story" id="sec-bloom">
+    <div class="copy">
+      <div class="eyebrow reveal">Chapter III &nbsp;·&nbsp; The Opening</div>
+      <p class="statement reveal d1">So you begin. Small promises, kept daily.<br>And something in you starts to <em>open</em>.</p>
+      <p class="sub reveal d2">Every habit kept, every skill learned, every milestone reached — the lily opens with you. Look up. It's already happening.</p>
+    </div>
+  </section>
+
+  <!-- FULL BLOOM -->
+  <section class="story" id="sec-full">
+    <div class="copy">
+      <div class="eyebrow reveal">Chapter IV &nbsp;·&nbsp; Full Bloom</div>
+      <div class="taglines">
+        <p class="whisper reveal d1">Watch your potential unfold.</p>
+        <p class="whisper reveal d2">Grow with intention.</p>
+        <p class="whisper reveal d3">A life designed to bloom.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- BUTTERFLY DREAMLAND -->
+  <section class="story" id="sec-dream" style="min-height:230vh;justify-content:flex-start;padding-top:55vh">
+    <div class="copy">
+      <div class="eyebrow reveal">Chapter V &nbsp;·&nbsp; The Dreaming</div>
+      <p class="whisper reveal d1" style="max-width:700px">Drift deeper.<br>This is the part of your story<br>where you are allowed to dream.</p>
+    </div>
+  </section>
+
+  <!-- LETTING GO -->
+  <section class="story" id="sec-letgo" style="min-height:220vh;justify-content:flex-start;padding-top:52vh">
+    <div class="copy">
+      <div class="eyebrow reveal">Chapter VI &nbsp;·&nbsp; The Letting Go</div>
+      <p class="statement reveal d1">And when it's time, you let go.<br><em>Not as an ending — as a harvest.</em></p>
+      <p class="sub reveal d2">Watch the petals fall to the grass. Where each one lands, something lasting forms — seven fruits, seven ways your growth bears weight. Touch one.</p>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <div id="features">
+    <div class="feature-wrap"><div class="card reveal" data-fruit="0"><div class="vein"></div>
+      <div class="num">I &nbsp;·&nbsp; The first fruit</div>
+      <h3>AI Life Strategist</h3>
+      <p>An intelligence that learns your goals, strengths, and seasons — then quietly designs the path between who you are and who you’re becoming. Plans, guidance, and course-corrections, always in step with you.</p>
+    </div></div>
+    <div class="feature-wrap"><div class="card reveal" data-fruit="1"><div class="vein"></div>
+      <div class="num">II &nbsp;·&nbsp; The second fruit</div>
+      <h3>Growth Dashboard</h3>
+      <p>Career, skills, wealth, health, and self — five gardens in one living view. See every dimension of your life growing in the same light, instead of scattered across ten apps.</p>
+    </div></div>
+    <div class="feature-wrap"><div class="card reveal" data-fruit="2"><div class="vein"></div>
+      <div class="num">III &nbsp;·&nbsp; The third fruit</div>
+      <h3>Bloom Score</h3>
+      <p>Your progress, rendered as a living flower. As you keep promises to yourself, petals open, colors deepen, light gathers. One glance tells you the story of your becoming.</p>
+    </div></div>
+    <div class="feature-wrap"><div class="card reveal" data-fruit="3"><div class="vein"></div>
+      <div class="num">IV &nbsp;·&nbsp; The fourth fruit</div>
+      <h3>Goal Operating System</h3>
+      <p>Dreams become milestones. Milestones become weeks. Weeks become a gentle rhythm of action plans, reviews, and accountability — so consistency stops being a battle.</p>
+    </div></div>
+    <div class="feature-wrap"><div class="card reveal" data-fruit="4"><div class="vein"></div>
+      <div class="num">V &nbsp;·&nbsp; The fifth fruit</div>
+      <h3>Career Growth Hub</h3>
+      <p>Portfolio building, resume craft, skill roadmaps, and networking guidance — a strategist for the professional version of you, growing in public.</p>
+    </div></div>
+    <div class="feature-wrap"><div class="card reveal" data-fruit="5"><div class="vein"></div>
+      <div class="num">VI &nbsp;·&nbsp; The sixth fruit</div>
+      <h3>Second Brain</h3>
+      <p>Notes, journals, and ideas woven into one AI-powered memory. Everything you’ve ever thought, reflected, or learned — searchable, connected, and quietly working for you.</p>
+    </div></div>
+    <div class="feature-wrap"><div class="card reveal" data-fruit="6"><div class="vein"></div>
+      <div class="num">VII &nbsp;·&nbsp; The seventh fruit</div>
+      <h3>Life Analytics</h3>
+      <p>Habits, learning, wellness, and focus — your patterns made visible. Not surveillance of your life, but sunlight on it.</p>
+    </div></div>
+  </div>
+
+  <!-- FINALE -->
+  <section class="finale" id="sec-finale" style="min-height:220vh;justify-content:flex-end;padding-bottom:18vh">
+    <div class="copy center">
+      <div class="eyebrow reveal">Chapter VII &nbsp;·&nbsp; The Return</div>
+      <h2 class="reveal d1">And then — you bloom again.<br>Become who you are<br>capable of becoming.</h2>
+      <div class="cta-row reveal d2">
+        <input type="email" placeholder="your@email.com" aria-label="email">
+        <button class="btn" onclick="this.textContent='You’re on the list ✦'">Begin your bloom</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="mark">Lilium</div>
+  <div>grow with intention · mmxxvi</div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1/dist/lenis.min.js"></script>
+<script>
+'use strict';
+/* ============================================================
+   LILIUM — scroll-driven life cycle of a lily
+   bud → bloom → butterfly dreamland → petals fall → 7 fruits → rebloom
+   ============================================================ */
+
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
+const ilerp=(a,b,v)=>clamp((v-a)/(b-a),0,1);
+
+/* ---------------- starfield (cheap 2D canvas) ---------------- */
+(function(){
+  const c=document.getElementById('stars'),x=c.getContext('2d');
+  let stars=[];
+  function size(){c.width=innerWidth;c.height=innerHeight;
+    stars=Array.from({length:90},()=>({x:Math.random()*c.width,y:Math.random()*c.height,
+      r:Math.random()*1.1+.2,p:Math.random()*Math.PI*2,s:.5+Math.random()}));}
+  size();addEventListener('resize',size);
+  (function tick(t){
+    x.clearRect(0,0,c.width,c.height);
+    for(const s of stars){
+      const a=.25+.55*Math.abs(Math.sin(t*.0006*s.s+s.p));
+      x.fillStyle=`rgba(220,205,245,${a})`;
+      x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fill();
+    }
+    requestAnimationFrame(tick);
+  })(0);
+})();
+
+/* ---------------- three.js scene ---------------- */
+const canvas=document.getElementById('scene');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+renderer.setSize(innerWidth,innerHeight);
+renderer.outputEncoding=THREE.sRGBEncoding;
+
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.1,100);
+camera.position.set(0,.5,3.4);
+
+scene.add(new THREE.AmbientLight(0x6e6088,.35));
+scene.add(new THREE.HemisphereLight(0xf3e8ff,0x1a0f1e,.5));
+const keyLight=new THREE.DirectionalLight(0xfff0e8,1.15); keyLight.position.set(3,5,4); scene.add(keyLight);
+const rimLight=new THREE.DirectionalLight(0xb39ae0,.7); rimLight.position.set(-4,2,-3); scene.add(rimLight);
+const heartLight=new THREE.PointLight(0xffc9dd,0,9); heartLight.position.set(0,1.1,.4); scene.add(heartLight);
+
+/* ---------- glow sprite texture ---------- */
+function glowTexture(inner,outer){
+  const s=128,c=document.createElement('canvas');c.width=c.height=s;
+  const x=c.getContext('2d');
+  const g=x.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  g.addColorStop(0,inner);g.addColorStop(.35,outer);g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g;x.fillRect(0,0,s,s);
+  return new THREE.CanvasTexture(c);
+}
+const goldGlowTex=glowTexture('rgba(255,240,210,1)','rgba(245,200,140,.35)');
+const pinkGlowTex=glowTexture('rgba(255,225,238,1)','rgba(232,140,180,.3)');
+
+/* ============================================================
+   THE LILY
+   ============================================================ */
+const flower=new THREE.Group(); scene.add(flower);
+
+/* ----- painted petal texture (stargazer style) ----- */
+function petalTexture(){
+  const W=512,H=1024,c=document.createElement('canvas');c.width=W;c.height=H;
+  const x=c.getContext('2d');
+  // base wash : greenish cream at the very base -> cream -> blush at tip
+  let g=x.createLinearGradient(0,H,0,0);
+  g.addColorStop(0,'#e8ecd4');g.addColorStop(.07,'#fbf3ec');
+  g.addColorStop(.45,'#fbeef0');g.addColorStop(1,'#f7dde7');
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  // soft deep-pink heart stripe (tapered, blurred)
+  x.save();x.filter='blur(26px)';
+  g=x.createLinearGradient(0,H,0,0);
+  g.addColorStop(0,'rgba(228,62,138,1)');g.addColorStop(.55,'rgba(222,52,128,.85)');
+  g.addColorStop(.9,'rgba(219,106,156,.25)');g.addColorStop(1,'rgba(219,106,156,0)');
+  x.fillStyle=g;
+  x.beginPath();
+  x.moveTo(W*.5-W*.30,H);
+  x.quadraticCurveTo(W*.5-W*.26,H*.45,W*.5-W*.05,H*.06);
+  x.lineTo(W*.5+W*.05,H*.06);
+  x.quadraticCurveTo(W*.5+W*.26,H*.45,W*.5+W*.30,H);
+  x.closePath();x.fill();
+  x.restore();
+  // hotter inner stripe
+  x.save();x.filter='blur(10px)';
+  x.fillStyle='rgba(212,28,116,.75)';
+  x.beginPath();
+  x.moveTo(W*.5-W*.13,H);
+  x.quadraticCurveTo(W*.5-W*.10,H*.4,W*.5,H*.12);
+  x.quadraticCurveTo(W*.5+W*.10,H*.4,W*.5+W*.13,H);
+  x.closePath();x.fill();
+  x.restore();
+  // radiating veins
+  x.strokeStyle='rgba(190,80,130,.14)';x.lineWidth=2.2;x.lineCap='round';
+  for(let i=0;i<11;i++){
+    const f=(i/10-.5);
+    x.beginPath();x.moveTo(W*.5+f*W*.1,H*.99);
+    x.quadraticCurveTo(W*.5+f*W*.5,H*.5,W*.5+f*W*.86,H*.07);
+    x.stroke();
+  }
+  // crimson freckles (papillae) on the lower-middle blade
+  for(let i=0;i<110;i++){
+    const ty=.16+Math.pow(Math.random(),1.4)*.55;          // along petal, from base
+    const spread=.06+ty*.30;
+    const tx=.5+(Math.random()*2-1)*spread;
+    const yy=H*(1-ty), xx=W*tx, r=1.6+Math.random()*3.4;
+    x.fillStyle=`rgba(${150+Math.random()*40|0},${20+Math.random()*20|0},${60+Math.random()*25|0},${.55+Math.random()*.4})`;
+    x.beginPath();x.arc(xx,yy,r,0,7);x.fill();
+    x.fillStyle='rgba(255,235,242,.25)';
+    x.beginPath();x.arc(xx-r*.3,yy-r*.3,r*.35,0,7);x.fill();
+  }
+  // luminous white margins
+  for(const side of[0,1]){
+    g=x.createLinearGradient(side?W:0,0,side?W*.72:W*.28,0);
+    g.addColorStop(0,'rgba(255,250,252,.95)');g.addColorStop(1,'rgba(255,250,252,0)');
+    x.fillStyle=g;x.fillRect(side?W*.7:0,0,W*.3,H);
+  }
+  // micro-crinkles across the blade (petal tissue)
+  x.strokeStyle='rgba(255,255,255,.05)';x.lineWidth=1;
+  for(let i=0;i<150;i++){
+    const yy=Math.random()*H, xx=Math.random()*W*.8+W*.1, len=10+Math.random()*32;
+    x.beginPath();x.moveTo(xx,yy);
+    x.quadraticCurveTo(xx+len/2,yy+(Math.random()-.5)*7,xx+len,yy);x.stroke();
+  }
+  x.strokeStyle='rgba(160,50,100,.05)';
+  for(let i=0;i<80;i++){
+    const yy=Math.random()*H*.8+H*.15, xx=Math.random()*W*.7+W*.15, len=8+Math.random()*20;
+    x.beginPath();x.moveTo(xx,yy);x.lineTo(xx+len,yy+(Math.random()-.5)*4);x.stroke();
+  }
+  // nectar throat: soft green-gold at the very base
+  x.save();x.filter='blur(18px)';
+  g=x.createRadialGradient(W/2,H,5,W/2,H,H*.16);
+  g.addColorStop(0,'rgba(192,202,122,.9)');g.addColorStop(.6,'rgba(172,192,112,.35)');
+  g.addColorStop(1,'rgba(172,192,112,0)');
+  x.fillStyle=g;x.beginPath();x.arc(W/2,H,H*.16,0,7);x.fill();
+  x.restore();
+  const tex=new THREE.CanvasTexture(c);
+  tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+  return tex;
+}
+const petalTex=petalTexture();
+
+/* ----- liquid-glass petal shader: soft edges, rim glow, light through the petal ----- */
+function petalMaterial(){
+  return new THREE.ShaderMaterial({
+    uniforms:{
+      map:{value:petalTex},
+      uOpacity:{value:1},
+      uGlow:{value:0},
+      uLight:{value:new THREE.Vector3(3,5,4).normalize()}
+    },
+    vertexShader:`
+      varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+      void main(){
+        vUv=uv;
+        vec4 mv=modelViewMatrix*vec4(position,1.);
+        vN=normalize(normalMatrix*normal);
+        vV=normalize(-mv.xyz);
+        gl_Position=projectionMatrix*mv;
+      }`,
+    fragmentShader:`
+      uniform sampler2D map; uniform float uOpacity; uniform float uGlow; uniform vec3 uLight;
+      varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+      void main(){
+        vec3 n=normalize(vN); if(!gl_FrontFacing) n=-n;
+        vec3 v=normalize(vV);
+        vec4 tex=texture2D(map,vUv);
+        vec3 L=normalize((viewMatrix*vec4(uLight,0.)).xyz);
+        float nl=dot(n,L)*.5+.5;                      /* soft half-lambert shading */
+        float sss=max(dot(-n,L),0.);                  /* light glowing through the petal */
+        float fres=pow(1.-abs(dot(n,v)),2.4);         /* liquid glass rim */
+        float spec=pow(max(dot(reflect(-L,n),v),0.),30.);
+        vec3 col=tex.rgb*(.5+.62*nl);
+        col+=vec3(1.,.74,.86)*sss*.4;
+        col+=vec3(1.,.86,.95)*fres*.42;
+        col+=vec3(1.)*spec*.30;
+        col+=tex.rgb*uGlow;
+        float ex=smoothstep(0.,.10,vUv.x)*(1.-smoothstep(.90,1.,vUv.x));
+        float ey=1.-smoothstep(.93,1.,vUv.y);
+        float soft=mix(.45,1.,ex*ey);                 /* edges dissolve softly */
+        gl_FragColor=vec4(col,uOpacity*.88*soft);
+      }`,
+    transparent:true, side:THREE.DoubleSide, depthWrite:false
+  });
+}
+
+/* ----- petal: bendable strip rebuilt each frame ----- */
+const P_LEN=1.7, P_WID=.62, SEG_L=24, SEG_W=10;
+function makeStripGeometry(){
+  const g=new THREE.BufferGeometry();
+  const verts=(SEG_L+1)*(SEG_W+1);
+  g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(verts*3),3));
+  const uv=new Float32Array(verts*2);
+  let i=0;
+  for(let li=0;li<=SEG_L;li++)for(let wi=0;wi<=SEG_W;wi++){
+    uv[i*2]=wi/SEG_W;uv[i*2+1]=li/SEG_L;i++;
+  }
+  g.setAttribute('uv',new THREE.BufferAttribute(uv,2));
+  const idx=[];
+  for(let li=0;li<SEG_L;li++)for(let wi=0;wi<SEG_W;wi++){
+    const a=li*(SEG_W+1)+wi,b=a+SEG_W+1;
+    idx.push(a,b,a+1,b,b+1,a+1);
+  }
+  g.setIndex(idx);
+  return g;
+}
+function petalWidth(t,mul){return P_WID*mul*Math.pow(Math.sin(Math.PI*clamp(t,.001,.999)),.58)*(1-.16*t)}
+
+/* update petal vertices for an openness value (0 closed bud → 1 full) */
+function bendPetal(geo,open,baseRadius,widthMul,ruffle,seed){
+  if(geo.userData.lastOpen!==undefined&&Math.abs(geo.userData.lastOpen-open)<.0012)return;
+  geo.userData.lastOpen=open;
+  const pos=geo.attributes.position.array;
+  const N=40; // integration steps for centerline
+  const dL=P_LEN/N;
+  const cy=[],cz=[],ny=[],nz=[];
+  let y=0,z=baseRadius;
+  for(let k=0;k<=N;k++){
+    const t=k/N;
+    const phi=(-.09+1.55*open)*(.32+.68*t)+1.15*open*open*t*t*t;
+    cy[k]=y;cz[k]=z;
+    ny[k]=-Math.sin(phi);nz[k]=Math.cos(phi);
+    y+=dL*Math.cos(phi); z+=dL*Math.sin(phi);
+  }
+  const crossCurl=.18-(open*.08);
+  let i=0;
+  for(let li=0;li<=SEG_L;li++){
+    const t=li/SEG_L, k=Math.round(t*N);
+    const w=petalWidth(t,widthMul);
+    const tw=Math.sin(seed*3.7)*.16*t*open, ctw=Math.cos(tw), stw=Math.sin(tw);
+    for(let wi=0;wi<=SEG_W;wi++){
+      const s=wi/SEG_W-.5;
+      const edge=Math.pow(Math.abs(s)*2,2.1);
+      const ruf=ruffle*edge*Math.sin(t*13+seed+s*6)*(.2+.8*open)*(.25+.75*t);
+      const cup=crossCurl*(s*s*4)*(1-t*.35)+ruf;
+      const px=s*w*(1+(1-open)*-.22);
+      const ln=cup+px*stw;
+      pos[i*3]  = px*ctw;
+      pos[i*3+1]= cy[k]+ln*ny[k];
+      pos[i*3+2]= cz[k]+ln*nz[k];
+      i++;
+    }
+  }
+  geo.attributes.position.needsUpdate=true;
+  geo.computeVertexNormals();
+}
+
+/* twelve petals in two whorls — Roselily-style double bloom */
+const petals=[];
+for(let i=0;i<12;i++){
+  const whorl=i<6?0:1;                 /* 0 = outer wide whorl, 1 = inner rose-cup whorl */
+  const geo=makeStripGeometry();
+  const mat=petalMaterial();
+  const mesh=new THREE.Mesh(geo,mat);
+  mesh.scale.setScalar(whorl?0.72:1);
+  const rotY=(i%6)/6*Math.PI*2+whorl*Math.PI/6;
+  const pivot=new THREE.Group();
+  pivot.rotation.y=rotY;
+  pivot.add(mesh);
+  flower.add(pivot);
+  petals.push({geo,mat,mesh,pivot,
+    delay:whorl?.22:0,
+    openMul:whorl?.8:1,
+    widthMul:whorl?1.06:.96,
+    ruffleSeed:Math.random()*20,
+    homeRotY:rotY,
+    fallSeed:Math.random()*10});
+}
+
+/* ----- stamens & pistil (appear as flower opens) ----- */
+const heart=new THREE.Group(); flower.add(heart);
+{
+  const filMat=new THREE.MeshStandardMaterial({color:0xf2ecd8,roughness:.55});
+  const anthMat=new THREE.MeshStandardMaterial({color:0x6b2412,roughness:.85});
+  const up=new THREE.Vector3(0,1,0);
+  for(let i=0;i<6;i++){
+    const a=i/6*Math.PI*2+.5;
+    const dx=Math.cos(a),dz=Math.sin(a);
+    // filament curving outward like a real lily
+    const curve=new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(0,.04,0),
+      new THREE.Vector3(dx*.22,.6,dz*.22),
+      new THREE.Vector3(dx*.5,1.0,dz*.5));
+    heart.add(new THREE.Mesh(new THREE.TubeGeometry(curve,14,.012,5),filMat));
+    // T-shaped versatile anther balanced on the filament tip
+    const anth=new THREE.Mesh(new THREE.SphereGeometry(.095,10,8),anthMat);
+    anth.scale.set(.27,1,.27);
+    const axis=new THREE.Vector3(-dz,.25,dx).normalize();
+    anth.quaternion.setFromUnitVectors(up,axis);
+    anth.position.set(dx*.52,1.02,dz*.52);
+    heart.add(anth);
+  }
+  // pistil with three-lobed stigma
+  const pcurve=new THREE.QuadraticBezierCurve3(
+    new THREE.Vector3(0,.04,0),new THREE.Vector3(.03,.7,.02),new THREE.Vector3(.05,1.22,.03));
+  heart.add(new THREE.Mesh(new THREE.TubeGeometry(pcurve,12,.02,6),filMat));
+  const stigMat=new THREE.MeshStandardMaterial({color:0x7c4258,roughness:.6});
+  for(let i=0;i<3;i++){
+    const sa=i/3*Math.PI*2;
+    const lobe=new THREE.Mesh(new THREE.SphereGeometry(.045,8,6),stigMat);
+    lobe.position.set(.05+Math.cos(sa)*.03,1.23,.03+Math.sin(sa)*.03);
+    heart.add(lobe);
+  }
+  heart.scale.setScalar(.001);
+}
+
+/* ----- stem + leaves ----- */
+const stemCurve=new THREE.CatmullRomCurve3([
+  new THREE.Vector3(.16,-4.4,.05), new THREE.Vector3(-.07,-3.0,-.04),
+  new THREE.Vector3(.06,-1.6,.03), new THREE.Vector3(0,0,0)
+]);
+const stemMat=new THREE.MeshStandardMaterial({color:0x4e7a3a,roughness:.7});
+const stem=new THREE.Mesh(new THREE.TubeGeometry(stemCurve,32,.055,7),stemMat);
+flower.add(stem);
+
+function leafTexture(){
+  const W=128,H=512,c=document.createElement('canvas');c.width=W;c.height=H;
+  const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,H,0,0);
+  g.addColorStop(0,'#2f5a23');g.addColorStop(.6,'#4d7c33');g.addColorStop(1,'#79a64c');
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  x.strokeStyle='rgba(220,240,190,.30)';x.lineWidth=3;
+  x.beginPath();x.moveTo(W/2,H);x.lineTo(W/2,0);x.stroke();
+  x.strokeStyle='rgba(20,45,12,.25)';x.lineWidth=1.5;
+  for(const f of[-.32,-.18,.18,.32]){
+    x.beginPath();x.moveTo(W/2,H);x.quadraticCurveTo(W/2+f*W,H*.5,W/2+f*W*1.6,0);x.stroke();
+  }
+  return new THREE.CanvasTexture(c);
+}
+const leafTex=leafTexture();
+const leaves=[];
+function makeLeaf(yPos,rotY,len){
+  const geo=makeStripGeometry();
+  const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({
+    map:leafTex,side:THREE.DoubleSide,roughness:.6,
+    emissive:0x0d2208,emissiveIntensity:.4}));
+  bendPetal(geo,.78,.05,.8,0,0);
+  const pivot=new THREE.Group();
+  pivot.position.y=yPos; pivot.rotation.y=rotY; pivot.rotation.z=.0;
+  mesh.rotation.x=.45; mesh.scale.set(.55,len,.7);
+  pivot.add(mesh); flower.add(pivot);
+  leaves.push({pivot,grow:Math.random()*.3});
+  return pivot;
+}
+makeLeaf(-1.15,.6,.8); makeLeaf(-1.9,2.7,1.0); makeLeaf(-2.8,4.6,.9); makeLeaf(-3.5,1.6,.75);
+
+/* ----- side stems with buds: a proper lily plant ----- */
+const GROUND_Y=-4.4;
+const sideBuds=[];
+function makeBud(scale,tip,maxOpen){
+  const start=new THREE.Vector3(.02,tip.y-1.3,0);
+  const mid=new THREE.Vector3(tip.x*.45,tip.y-.55,tip.z*.45);
+  const curve=new THREE.QuadraticBezierCurve3(start,mid,tip);
+  flower.add(new THREE.Mesh(new THREE.TubeGeometry(curve,18,.036,6),stemMat));
+  const head=new THREE.Group();
+  head.position.copy(tip);
+  const baseRotZ=-tip.x*.20;
+  head.rotation.z=baseRotZ; head.rotation.x=tip.z*.18;
+  head.scale.setScalar(scale);
+  flower.add(head);
+  const ps=[];
+  for(let i=0;i<6;i++){
+    const geo=makeStripGeometry();
+    const mesh=new THREE.Mesh(geo,petalMaterial());
+    const pivot=new THREE.Group();
+    pivot.rotation.y=i/6*Math.PI*2;
+    pivot.add(mesh);head.add(pivot);
+    ps.push({geo,mat:mesh.material,pivot,seed:Math.random()*20,
+      homeRotY:i/6*Math.PI*2,fallSeed:Math.random()*10});
+  }
+  sideBuds.push({head,petals:ps,maxOpen,baseRotZ});
+  return head;
+}
+makeBud(.62,new THREE.Vector3(1.25,-1.05,-.25),.5);
+makeBud(.5, new THREE.Vector3(-1.35,-1.75,.3),.22);
+makeBud(.42,new THREE.Vector3(.55,-2.3,.85),.1);
+
+/* ----- grass field on a dark ground ----- */
+const groundTex=(function(){
+  const s=512,c=document.createElement('canvas');c.width=c.height=s;
+  const x=c.getContext('2d');
+  const g=x.createRadialGradient(s/2,s/2,20,s/2,s/2,s/2);
+  g.addColorStop(0,'#16331c');g.addColorStop(.55,'#0b2012');g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g;x.fillRect(0,0,s,s);
+  return new THREE.CanvasTexture(c);
+})();
+const ground=new THREE.Mesh(new THREE.CircleGeometry(11,48),
+  new THREE.MeshBasicMaterial({map:groundTex,transparent:true,depthWrite:false}));
+ground.rotation.x=-Math.PI/2; ground.position.y=GROUND_Y; scene.add(ground);
+
+const grassMat=new THREE.ShaderMaterial({
+  uniforms:{uTime:{value:0}},
+  vertexShader:`
+    attribute vec3 aOffset; attribute float aRot; attribute vec2 aScale;
+    attribute float aPhase; attribute float aShade; attribute float aLean;
+    uniform float uTime;
+    varying float vT; varying float vShade; varying float vDist; varying float vLean;
+    void main(){
+      vT=position.y; vShade=aShade; vLean=aLean;
+      vec3 p=position;
+      p.x*=aScale.x; p.y*=aScale.y;
+      float c=cos(aRot),s=sin(aRot);
+      p=vec3(p.x*c,p.y,p.x*s);
+      /* natural curve: each blade leans over with height */
+      float lean=aLean*vT*vT;
+      p.x+=c*lean; p.z+=s*lean;
+      /* layered wind: slow body sway + fast tip flutter */
+      float sway=sin(uTime*1.3+aPhase+aOffset.x*.7+aOffset.z*.5)*.14*vT*vT
+               +sin(uTime*3.1+aPhase*2.)*.025*vT*vT*vT;
+      p.x+=sway; p.z+=sway*.55;
+      p+=aOffset;
+      vec4 mv=modelViewMatrix*vec4(p,1.);
+      vDist=-mv.z;
+      gl_Position=projectionMatrix*mv;
+    }`,
+  fragmentShader:`
+    varying float vT; varying float vShade; varying float vDist; varying float vLean;
+    void main(){
+      /* deep rooted green to sunlit blade tip, per-blade variance */
+      vec3 deep=vec3(.022,.085,.038);
+      vec3 mid =vec3(.10,.26,.10);
+      vec3 tip =vec3(.27,.56,.21);
+      vec3 col=mix(deep,mid,smoothstep(0.,.55,vT));
+      col=mix(col,tip,smoothstep(.45,1.,vT)*vT)*vShade;
+      col.g*=1.+vLean*.25;                          /* subtle hue variance */
+      col+=vec3(.5,.42,.68)*pow(vT,3.5)*.20;        /* moonlit lavender tips */
+      col=mix(col,vec3(0.),smoothstep(6.5,13.5,vDist));
+      gl_FragColor=vec4(col,1.);
+    }`,
+  side:THREE.DoubleSide
+});
+(function(){
+  /* smooth tapered blade: 3 segments to a point */
+  const blade=new THREE.BufferGeometry();
+  blade.setAttribute('position',new THREE.BufferAttribute(new Float32Array([
+    -0.5,0,0,   0.5,0,0,
+    -0.42,0.45,0, 0.42,0.45,0,
+    -0.26,0.78,0, 0.26,0.78,0,
+     0,1,0]),3));
+  blade.setIndex([0,1,2, 1,3,2, 2,3,4, 3,5,4, 4,5,6]);
+  const N=3600;
+  const inst=new THREE.InstancedBufferGeometry();
+  inst.index=blade.index;
+  inst.attributes.position=blade.attributes.position;
+  const off=new Float32Array(N*3),rot=new Float32Array(N),sc=new Float32Array(N*2),
+        ph=new Float32Array(N),sh=new Float32Array(N),ln=new Float32Array(N);
+  for(let i=0;i<N;i++){
+    const r=9.5*Math.pow(Math.random(),.65),a=Math.random()*Math.PI*2;
+    off[i*3]=Math.cos(a)*r; off[i*3+1]=GROUND_Y; off[i*3+2]=Math.sin(a)*r;
+    rot[i]=Math.random()*Math.PI;
+    sc[i*2]=.022+Math.random()*.026; sc[i*2+1]=.42+Math.random()*.62;
+    ph[i]=Math.random()*7; sh[i]=.75+Math.random()*.5;
+    ln[i]=(Math.random()-.5)*.5;
+  }
+  inst.setAttribute('aOffset',new THREE.InstancedBufferAttribute(off,3));
+  inst.setAttribute('aRot',new THREE.InstancedBufferAttribute(rot,1));
+  inst.setAttribute('aScale',new THREE.InstancedBufferAttribute(sc,2));
+  inst.setAttribute('aPhase',new THREE.InstancedBufferAttribute(ph,1));
+  inst.setAttribute('aShade',new THREE.InstancedBufferAttribute(sh,1));
+  inst.setAttribute('aLean',new THREE.InstancedBufferAttribute(ln,1));
+  inst.instanceCount=N;
+  const grass=new THREE.Mesh(inst,grassMat);
+  grass.frustumCulled=false;
+  scene.add(grass);
+})();
+
+/* ----- magic dust (Tangled sparkles) ----- */
+let dust;
+{
+  const n=240,pos=new Float32Array(n*3),seed=new Float32Array(n);
+  for(let i=0;i<n;i++){
+    pos[i*3]=(Math.random()-.5)*8;
+    pos[i*3+1]=Math.random()*7-3.5;
+    pos[i*3+2]=(Math.random()-.5)*6;
+    seed[i]=Math.random()*100;
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  dust=new THREE.Points(g,new THREE.PointsMaterial({
+    size:.14,map:goldGlowTex,transparent:true,opacity:0,
+    depthWrite:false,blending:THREE.AdditiveBlending,color:0xffe1b0}));
+  dust.userData.seed=seed;
+  scene.add(dust);
+}
+
+/* ----- heart glow sprite ----- */
+const heartGlow=new THREE.Sprite(new THREE.SpriteMaterial({
+  map:pinkGlowTex,transparent:true,opacity:0,depthWrite:false,
+  blending:THREE.AdditiveBlending,color:0xffd2e2}));
+heartGlow.scale.setScalar(2.6); heartGlow.position.set(0,1,0); scene.add(heartGlow);
+
+/* ----- ambient halo behind the flower (vibrant bloom on pure black) ----- */
+const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:pinkGlowTex,
+  transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,color:0xd9a8e8}));
+halo.scale.setScalar(8); halo.position.set(0,.8,-1.4); scene.add(halo);
+
+/* ============================================================
+   BUTTERFLIES — Shinobu dreamland
+   ============================================================ */
+function wingTexture(){
+  const s=256,c=document.createElement('canvas');c.width=c.height=s;
+  const x=c.getContext('2d');
+  // forewing + hindwing silhouette, drawn pointing right
+  x.translate(10,s/2);
+  function lobe(px,py,rx,ry,rot,g0,g1){
+    x.save();x.translate(px,py);x.rotate(rot);
+    const g=x.createRadialGradient(0,0,2,0,0,Math.max(rx,ry));
+    g.addColorStop(0,g0);g.addColorStop(.55,g1);g.addColorStop(1,'rgba(40,20,70,0)');
+    x.fillStyle=g;x.beginPath();x.ellipse(0,0,rx,ry,0,0,7);x.fill();x.restore();
+  }
+  lobe(95,-52,98,55,-.32,'rgba(255,250,255,.95)','rgba(208,185,235,.55)'); // forewing
+  lobe(70, 42,72,48,.42,'rgba(245,235,255,.9)','rgba(190,165,225,.5)');    // hindwing
+  // veins
+  x.strokeStyle='rgba(70,40,110,.55)';x.lineWidth=3;x.lineCap='round';
+  for(const a of[-.62,-.38,-.16,.12,.4,.62]){
+    x.beginPath();x.moveTo(4,0);
+    x.quadraticCurveTo(80*Math.cos(a),95*Math.sin(a)-10,170*Math.cos(a*.8),150*Math.sin(a));
+    x.stroke();
+  }
+  // bright spots near edge
+  x.fillStyle='rgba(255,255,255,.8)';
+  for(const[px,py,r]of[[160,-70,7],[178,-38,5],[150,60,6],[120,86,4]]){
+    x.beginPath();x.arc(px,py,r,0,7);x.fill();
+  }
+  return new THREE.CanvasTexture(c);
+}
+const wingTex=wingTexture();
+const butterflies=[];
+const flock=new THREE.Group(); scene.add(flock);
+
+function makeButterfly(scale){
+  const g=new THREE.Group();
+  const mat=new THREE.MeshBasicMaterial({map:wingTex,transparent:true,opacity:0,
+    side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending,
+    color:new THREE.Color().setHSL(.74+Math.random()*.06,.55,.72)});
+  const wgeo=new THREE.PlaneGeometry(1,1).translate(.5,0,0); // hinge at body
+  const wl=new THREE.Mesh(wgeo,mat), wr=new THREE.Mesh(wgeo,mat);
+  wr.scale.x=-1;
+  wl.rotation.x=-Math.PI/2; wr.rotation.x=-Math.PI/2;
+  const wlp=new THREE.Group(),wrp=new THREE.Group();
+  wlp.add(wl);wrp.add(wr);g.add(wlp,wrp);
+  const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:pinkGlowTex,
+    transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,
+    color:0xcbb3e6}));
+  glow.scale.setScalar(1.6);g.add(glow);
+  g.scale.setScalar(scale);
+  flock.add(g);
+  return {g,mat,glowMat:glow.material,wlp,wrp,
+    base:new THREE.Vector3((Math.random()-.5)*9,(Math.random()-.5)*8,(Math.random()-.5)*5-.5),
+    fx:.25+Math.random()*.5, fy:.2+Math.random()*.45, fz:.2+Math.random()*.4,
+    px:Math.random()*7, py:Math.random()*7, pz:Math.random()*7,
+    ax:1.2+Math.random()*1.8, ay:.9+Math.random()*1.5, az:.8+Math.random()*1.2,
+    flap:5+Math.random()*4, fphase:Math.random()*7};
+}
+for(let i=0;i<34;i++) butterflies.push(makeButterfly(.16+Math.random()*.2));
+for(let i=0;i<4;i++)  butterflies.push(makeButterfly(.5+Math.random()*.3)); // hero butterflies
+
+/* ============================================================
+   FRUITS — seven features
+   ============================================================ */
+/* ----- lychee skin texture: red-pink with cellular bumps ----- */
+function lycheeTexture(){
+  const s=256,c=document.createElement('canvas');c.width=c.height=s;
+  const x=c.getContext('2d');
+  const g=x.createRadialGradient(s*.4,s*.35,10,s*.5,s*.5,s*.72);
+  g.addColorStop(0,'#f06a80');g.addColorStop(.6,'#d94560');g.addColorStop(1,'#b52e48');
+  x.fillStyle=g;x.fillRect(0,0,s,s);
+  for(let i=0;i<240;i++){
+    const px=Math.random()*s,py=Math.random()*s,r=2+Math.random()*3.5;
+    x.fillStyle='rgba(110,18,38,.4)';
+    x.beginPath();x.arc(px,py,r,0,7);x.fill();
+    x.fillStyle='rgba(255,170,180,.5)';
+    x.beginPath();x.arc(px-r*.35,py-r*.35,r*.3,0,7);x.fill();
+  }
+  return new THREE.CanvasTexture(c);
+}
+const lycheeTex=lycheeTexture();
+
+/* ----- lychee geometry: bumpy skin with little spikes ----- */
+function makeLycheeGeometry(rad){
+  const geo=new THREE.SphereGeometry(rad,42,32);
+  const pos=geo.attributes.position;
+  const d=new THREE.Vector3();
+  for(let i=0;i<pos.count;i++){
+    d.set(pos.getX(i),pos.getY(i),pos.getZ(i)).normalize();
+    const n1=Math.sin(d.x*23.7)*Math.sin(d.y*19.3+1.7)*Math.sin(d.z*27.1+4.2);
+    const n2=Math.sin(d.x*47+2)*Math.sin(d.y*39+5)*Math.sin(d.z*43+1);
+    const spike=Math.pow(Math.abs(n2),3)*rad*.22;
+    const bump=n1*rad*.04;
+    const r=rad+bump+spike;
+    pos.setXYZ(i,d.x*r,d.y*r,d.z*r);
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
+const fruits=[];
+const fruitRing=new THREE.Group(); scene.add(fruitRing);
+const lycheeGeo=makeLycheeGeometry(.17);
+for(let i=0;i<7;i++){
+  const tint=new THREE.Color().setHSL(.965-(i%3)*.018,.6,.6+(i%2)*.06);
+  const mesh=new THREE.Mesh(lycheeGeo,
+    new THREE.MeshStandardMaterial({map:lycheeTex,color:tint,roughness:.52,metalness:0,
+      emissive:0x7a1530,emissiveIntensity:.35,transparent:true,opacity:0}));
+  mesh.scale.y=1.12;
+  const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:pinkGlowTex,
+    transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,color:0xff9aa8}));
+  glow.scale.setScalar(.9);
+  const g=new THREE.Group(); g.add(mesh,glow); fruitRing.add(g);
+  const ga=(i/7)*Math.PI*2+.4, gr=1.3+(i%3)*.85+Math.random()*.4;
+  fruits.push({g,mesh,glowMat:glow.material,seed:Math.random()*7,pulse:0,
+    tx:Math.cos(ga)*gr, tz:Math.sin(ga)*gr*.75+1.4});
+}
+/* mother lychee — forms at the heart, then drops to the grass */
+const motherFruit=new THREE.Mesh(makeLycheeGeometry(.26),
+  new THREE.MeshStandardMaterial({map:lycheeTex,color:0xff8896,roughness:.52,
+    emissive:0x8a1c34,emissiveIntensity:.5,transparent:true,opacity:0}));
+motherFruit.scale.set(1,1.15,1); motherFruit.position.y=.55; scene.add(motherFruit);
+let motherPulse=0;
+
+/* click a fruit → liquid-glass glow pulse + chime */
+const raycaster=new THREE.Raycaster(), clickV=new THREE.Vector2();
+addEventListener('click',e=>{
+  clickV.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);
+  raycaster.setFromCamera(clickV,camera);
+  const meshes=fruits.map(f=>f.mesh); meshes.push(motherFruit);
+  const hit=raycaster.intersectObjects(meshes,false)[0];
+  if(hit){
+    const fr=fruits.find(f=>f.mesh===hit.object);
+    if(fr)fr.pulse=1; else motherPulse=1;
+    chime();
+  }
+});
+
+/* ============================================================
+   AUDIO — wind chimes among the butterflies
+   ============================================================ */
+let actx=null, masterGain=null, soundOn=true, audioUnlocked=false;
+const soundBtn=document.getElementById('soundBtn');
+soundBtn.classList.add('on');
+function unlockAudio(){
+  if(audioUnlocked)return;
+  try{
+    actx=new (window.AudioContext||window.webkitAudioContext)();
+    masterGain=actx.createGain();masterGain.gain.value=.14;
+    masterGain.connect(actx.destination);
+    audioUnlocked=true;
+  }catch(e){}
+}
+['pointerdown','touchstart','keydown'].forEach(ev=>
+  addEventListener(ev,unlockAudio,{once:false,passive:true}));
+soundBtn.addEventListener('click',()=>{
+  soundOn=!soundOn;soundBtn.classList.toggle('on',soundOn);
+  if(soundOn)unlockAudio();
+});
+const CHIME_NOTES=[523.25,587.33,659.25,783.99,880,1046.5,1174.7];
+let lastChime=0;
+function chime(){
+  if(!soundOn||!audioUnlocked||!actx)return;
+  if(actx.state==='suspended')actx.resume();
+  const now=actx.currentTime;
+  const f=CHIME_NOTES[Math.floor(Math.random()*CHIME_NOTES.length)];
+  const g=actx.createGain();
+  g.gain.setValueAtTime(0,now);
+  g.gain.linearRampToValueAtTime(.8,now+.012);
+  g.gain.exponentialRampToValueAtTime(.0001,now+2.2);
+  const o1=actx.createOscillator();o1.type='sine';o1.frequency.value=f;
+  const o2=actx.createOscillator();o2.type='sine';o2.frequency.value=f*2.756;
+  const g2=actx.createGain();g2.gain.value=.28;
+  o1.connect(g);o2.connect(g2);g2.connect(g);g.connect(masterGain);
+  o1.start(now);o2.start(now);o1.stop(now+2.3);o2.stop(now+2.3);
+}
+
+/* ============================================================
+   SCROLL CHOREOGRAPHY
+   ============================================================ */
+let marks={};
+function measure(){
+  const ids=['sec-hero','sec-ambition','sec-bloom','sec-full','sec-dream','sec-letgo','features','sec-finale'];
+  marks={};
+  for(const id of ids){
+    const el=document.getElementById(id);
+    marks[id]={top:el.offsetTop,bottom:el.offsetTop+el.offsetHeight,height:el.offsetHeight};
+  }
+  marks.max=document.documentElement.scrollHeight-innerHeight;
+  marks.vh=innerHeight;
+  marks.cards=[...document.querySelectorAll('.card')].map(el=>{
+    let y=0,n=el;while(n){y+=n.offsetTop;n=n.offsetParent}
+    return y;
+  });
+}
+addEventListener('resize',()=>{
+  measure();
+  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+
+let scrollY=0,smoothScroll=0,lastScrollForChime=0,chimeAccum=0;
+addEventListener('scroll',()=>{scrollY=window.scrollY},{passive:true});
+
+/* camera keyframes: [scrollMark, position, lookAt] */
+function cameraKeys(){
+  const vh=marks.vh;
+  return [
+    [0,                          [0,.5,6.2],  [0,.5,0]],
+    [marks['sec-ambition'].top,  [0,.5,4.8],  [0,-.1,0]],
+    [marks['sec-full'].top,      [.3,.7,5.0], [0,.1,0]],
+    [marks['sec-dream'].top,     [0,1.1,7.4], [0,-.4,0]],
+    [marks['sec-dream'].top+marks['sec-dream'].height*.5,[-.3,.8,7.8],[0,-.6,0]],
+    [marks['sec-letgo'].top,     [0,-.1,6.6], [0,-2.2,0]],
+    [marks['features'].top,      [0,-.4,7.6], [0,-3,.8]],
+    [marks['sec-finale'].top-vh*.5,[0,.7,5.8],[0,.35,0]],
+    [marks.max,                  [0,.8,4.8],  [0,.5,0]]
+  ];
+}
+
+const bgNight=document.getElementById('bg-night'),
+      bgDream=document.getElementById('bg-dream'),
+      bgDusk=document.getElementById('bg-dusk');
+
+let mouseX=0,mouseY=0;
+addEventListener('pointermove',e=>{
+  mouseX=(e.clientX/innerWidth-.5);mouseY=(e.clientY/innerHeight-.5);
+},{passive:true});
+
+const camPos=new THREE.Vector3(0,.55,3.1), camLook=new THREE.Vector3(0,.9,0);
+const clock=new THREE.Clock();
+
+/* Lenis — buttery smooth scrolling */
+let lenis=null;
+if(typeof Lenis!=='undefined'){
+  lenis=new Lenis({duration:1.7,smoothWheel:true,wheelMultiplier:.9});
+  lenis.on('scroll',e=>{scrollY=e.scroll});
+  document.querySelectorAll('a[href^="#"]').forEach(a=>{
+    a.addEventListener('click',e=>{
+      e.preventDefault();
+      lenis.scrollTo(a.getAttribute('href'),{duration:1.8});
+    });
+  });
+}
+
+function animate(ts){
+  requestAnimationFrame(animate);
+  if(lenis)lenis.raf(ts||0);
+  const T=clock.getElapsedTime();
+  smoothScroll=lerp(smoothScroll,scrollY,.085);
+  const sy=smoothScroll, vh=marks.vh;
+
+  /* ---- phase signals ---- */
+  const openness=smooth(ilerp(marks['sec-ambition'].top-vh*.6, marks['sec-full'].top, sy));
+  const dreamP=ilerp(marks['sec-dream'].top-vh, marks['sec-dream'].bottom, sy);
+  const butterflyAmt=smooth(ilerp(0,.22,dreamP))*(1-smooth(ilerp(.78,1,dreamP)));
+  const fallPGlobal=smooth(ilerp(marks['sec-letgo'].top-vh*.4, marks['sec-letgo'].bottom-vh*.3, sy));
+  const fruitP=smooth(ilerp(marks['features'].top-vh*.8, marks['features'].top+vh*1.4, sy));
+  const rebloom=smooth(ilerp(marks['sec-finale'].top-vh*.6, marks['sec-finale'].top+vh*.7, sy));
+
+  /* ---- background crossfade ---- */
+  bgDream.style.opacity=(butterflyAmt*.95).toFixed(3);
+  bgDusk.style.opacity=(smooth(ilerp(marks['sec-letgo'].top-vh,marks['features'].top,sy))*(1-rebloom*.5)).toFixed(3);
+  bgNight.style.opacity=1;
+
+  /* ---- petals ---- */
+  const effOpen=lerp(openness, 1, rebloom);
+  for(let i=0;i<petals.length;i++){
+    const p=petals[i];
+    const o=smooth(ilerp(p.delay,1,effOpen));
+    bendPetal(p.geo,o*p.openMul,.07,p.widthMul,.05,p.ruffleSeed);
+    /* falling */
+    let f=smooth(ilerp((i%6)*.04+(i<6?0:.12),.7+(i%6)*.04,fallPGlobal))*(1-rebloom);
+    p.pivot.position.y=-f*f*4.2;
+    p.pivot.position.x=Math.sin(f*4+p.fallSeed)*1.4*f;
+    p.pivot.position.z=Math.cos(f*3+p.fallSeed)*1.1*f;
+    p.pivot.rotation.y=p.homeRotY+f*3.5;
+    p.pivot.rotation.x=f*2.2;
+    p.mat.uniforms.uOpacity.value=1-smooth(ilerp(.55,1,f));
+    p.mat.uniforms.uGlow.value=rebloom*.9+Math.sin(T*1.7+i)*.05*effOpen;
+  }
+  /* gentle living sway */
+  flower.rotation.z=Math.sin(T*.5)*.016;
+  flower.rotation.y=Math.sin(T*.23)*.05 + (smooth(ilerp(marks['sec-bloom'].top,marks['sec-full'].bottom,sy)))*.6;
+
+  /* heart appears with bloom, hides during fall */
+  const heartS=smooth(ilerp(.55,1,effOpen))*(1-fallPGlobal*(1-rebloom));
+  heart.scale.setScalar(Math.max(.001,heartS));
+  heartLight.intensity=effOpen*1.6+rebloom*1.2;
+  heartGlow.material.opacity=effOpen*.5*(1-fallPGlobal*(1-rebloom))+rebloom*.45;
+  heartGlow.scale.setScalar(2.6+Math.sin(T*1.4)*.25+rebloom*1.6);
+  halo.material.opacity=.10+effOpen*.20+rebloom*.15;
+  halo.scale.setScalar(8+Math.sin(T*.8)*.5);
+
+  /* leaves grow with the bloom */
+  for(const lf of leaves){
+    const s=smooth(ilerp(lf.grow*.5,1,openness*1.2));
+    lf.pivot.scale.setScalar(Math.max(.001,s));
+  }
+
+  /* dust */
+  dust.material.opacity=.25+effOpen*.45+butterflyAmt*.3;
+  {
+    const pos=dust.geometry.attributes.position.array,seed=dust.userData.seed;
+    for(let i=0;i<seed.length;i++){
+      pos[i*3+1]+=Math.sin(T*.7+seed[i])*.0012+.0015;
+      if(pos[i*3+1]>4)pos[i*3+1]=-3.5;
+      pos[i*3]+=Math.sin(T*.4+seed[i]*2)*.0008;
+    }
+    dust.geometry.attributes.position.needsUpdate=true;
+  }
+
+  /* ---- butterflies ---- */
+  flock.position.y=(dreamP-.5)*-3.2; // parallax drift as you scroll through dreamland
+  const heroFlutter=smooth(ilerp(marks['sec-full'].top-vh,marks['sec-full'].bottom,sy))*.35;
+  for(let bi=0;bi<butterflies.length;bi++){
+    const b=butterflies[bi];
+    const amt=Math.max(butterflyAmt, heroFlutter*(bi%5===0?1:0));
+    b.mat.opacity=amt*.95;
+    b.glowMat.opacity=amt*.5;
+    if(amt<=0)continue;
+    const t=T;
+    b.g.position.set(
+      b.base.x+Math.sin(t*b.fx+b.px)*b.ax,
+      b.base.y+Math.sin(t*b.fy+b.py)*b.ay + Math.sin(t*2.2+b.px)*.12,
+      b.base.z+Math.cos(t*b.fz+b.pz)*b.az
+    );
+    const flap=.3+Math.sin(t*b.flap+b.fphase)*.75;
+    b.wlp.rotation.z=flap;  b.wrp.rotation.z=-flap;
+    b.g.rotation.y=Math.sin(t*b.fx+b.px+1.57)*.9;
+    b.g.rotation.z=Math.sin(t*b.fy+b.py)*.35;
+  }
+
+  /* chimes while inside the dreamland */
+  if(butterflyAmt>.12){
+    chimeAccum+=Math.abs(scrollY-lastScrollForChime);
+    if(chimeAccum>110 && performance.now()-lastChime>300){
+      chime();lastChime=performance.now();chimeAccum=0;
+    }
+  }
+  lastScrollForChime=scrollY;
+
+  /* ---- side buds breathe open, shed their petals, and regrow ---- */
+  for(let bi=0;bi<sideBuds.length;bi++){
+    const b=sideBuds[bi];
+    const bo=smooth(ilerp(.3,1,effOpen))*b.maxOpen+rebloom*.3;
+    for(let pi=0;pi<b.petals.length;pi++){
+      const pp=b.petals[pi];
+      bendPetal(pp.geo,Math.min(bo,1),.06,1,.04,pp.seed);
+      let f=smooth(ilerp(.12+bi*.08+pi*.03,.8+bi*.05,fallPGlobal))*(1-rebloom);
+      pp.pivot.position.y=-f*f*(3/b.head.scale.x);
+      pp.pivot.position.x=Math.sin(f*4+pp.fallSeed)*1.2*f;
+      pp.pivot.position.z=Math.cos(f*3+pp.fallSeed)*.9*f;
+      pp.pivot.rotation.y=pp.homeRotY+f*3;
+      pp.pivot.rotation.x=f*2;
+      pp.mat.uniforms.uOpacity.value=1-smooth(ilerp(.5,1,f));
+      pp.mat.uniforms.uGlow.value=rebloom*.8;
+    }
+    b.head.rotation.z=b.baseRotZ+Math.sin(T*.6+bi*2)*.03;
+  }
+
+  /* ---- grass wind ---- */
+  grassMat.uniforms.uTime.value=T;
+
+  /* ---- mother fruit forms as petals fall, then drops to the grass ---- */
+  motherPulse*=.94;
+  const mDrop=smooth(fruitP);
+  motherFruit.material.opacity=fallPGlobal*(1-rebloom*.45);
+  motherFruit.scale.setScalar(Math.max(.001,(.6+.9*fallPGlobal)*(1+motherPulse*.25)));
+  motherFruit.scale.y=motherFruit.scale.x*1.15;
+  motherFruit.position.set(
+    lerp(0,.4,mDrop),
+    lerp(.55,GROUND_Y+.27,mDrop*mDrop)+Math.sin(T*1.2)*.04*(1-mDrop),
+    lerp(0,2.1,mDrop));
+  motherFruit.rotation.z=mDrop*2.2;
+  motherFruit.material.emissiveIntensity=.5+motherPulse*2.2;
+
+  /* ---- seven fruits: drop from the flower, rest on the grass ---- */
+  let activeIdx=-1,best=1e9;
+  for(let i=0;i<marks.cards.length;i++){
+    const d=Math.abs(marks.cards[i]-(sy+vh*.5));
+    if(d<best){best=d;activeIdx=i}
+  }
+  if(best>vh*.9)activeIdx=-1;
+  for(let i=0;i<7;i++){
+    const fr=fruits[i];
+    const dp=smooth(ilerp(i*.06,.55+i*.06,fruitP));      /* staggered drops */
+    const active=(i===activeIdx)?1:0;
+    fr._a=lerp(fr._a||0,active,.06);
+    fr.pulse*=.94;
+    fr.g.position.set(
+      lerp(0,fr.tx,dp),
+      lerp(.9,GROUND_Y+.28,dp*dp),
+      lerp(0,fr.tz,dp));
+    fr.g.rotation.x=dp*(4+i); fr.g.rotation.z=dp*(3+i*.5);
+    fr.g.scale.setScalar(Math.max(.001,fruitP*(1.7+fr._a*.5+fr.pulse*.5)));
+    fr.mesh.material.opacity=fruitP*(1-rebloom*.45);
+    fr.mesh.material.emissiveIntensity=.45+fr._a*1.0+fr.pulse*2.2+Math.sin(T*2+fr.seed)*.1;
+    fr.glowMat.opacity=fruitP*(.55+fr._a*.45+fr.pulse*.6);
+  }
+
+  /* ---- camera ---- */
+  const keys=cameraKeys();
+  let pA=keys[0],pB=keys[keys.length-1],tt=0;
+  for(let i=0;i<keys.length-1;i++){
+    if(sy>=keys[i][0]&&sy<=keys[i+1][0]){
+      pA=keys[i];pB=keys[i+1];
+      tt=smooth(ilerp(pA[0],pB[0],sy));break;
+    }
+  }
+  if(sy>keys[keys.length-1][0]){pA=pB=keys[keys.length-1];tt=0}
+  camPos.set(
+    lerp(pA[1][0],pB[1][0],tt)+mouseX*.3,
+    lerp(pA[1][1],pB[1][1],tt)-mouseY*.2,
+    lerp(pA[1][2],pB[1][2],tt));
+  camLook.set(lerp(pA[2][0],pB[2][0],tt),lerp(pA[2][1],pB[2][1],tt),lerp(pA[2][2],pB[2][2],tt));
+  camera.position.lerp(camPos,.08);
+  camera.lookAt(camLook);
+
+  renderer.render(scene,camera);
+}
+
+/* ---------------- reveal-on-scroll ---------------- */
+const io=new IntersectionObserver(es=>{
+  for(const e of es)if(e.isIntersecting)e.target.classList.add('visible');
+},{threshold:.25});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* ---------------- go ---------------- */
+measure();
+scrollY=window.scrollY;
+smoothScroll=scrollY;
+requestAnimationFrame(animate);
+addEventListener('load',()=>{
+  measure();
+  document.getElementById('loader').classList.add('done');
+});
+setTimeout(()=>document.getElementById('loader').classList.add('done'),2500);
+</script>
+</body>
+</html>
